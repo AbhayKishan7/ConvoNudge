@@ -127,7 +127,7 @@ export default function Home() {
             <div className="inline-flex items-center justify-center p-3 bg-emerald-600/20 text-emerald-400 rounded-full mb-2">
               <MessageSquare className="w-8 h-8" />
             </div>
-            <h1 className="text-2xl font-bold">ConvoNodge</h1>
+            <h1 className="text-2xl font-bold">ConvoNudge</h1>
             <p className="text-slate-400 text-sm">Practice anonymous 1-on-1 conversations with AI assistance.</p>
           </div>
 
