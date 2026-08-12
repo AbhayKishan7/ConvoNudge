@@ -42,8 +42,9 @@ export default function Home() {
     });
 
     socket.on('ai_copilot_hint', (hint) => {
-      setAiHint(hint);
-    });
+  console.log("AI Hint received from backend:", hint);
+  setAiHint(hint);
+});
 
     socket.on('message_blocked', (data) => {
       setBlockedNotice(data.reason);
