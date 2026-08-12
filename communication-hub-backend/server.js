@@ -24,8 +24,8 @@ app.use('/api/sessions', sessionRoutes);
 // Socket.io Setup
 const io = new Server(server, {
   cors: {
-    origin: '*',
-    methods: ['GET', 'POST']
+    origin: "*", // Allows requests from your Netlify frontend URL
+    methods: ["GET", "POST"]
   }
 });
 
