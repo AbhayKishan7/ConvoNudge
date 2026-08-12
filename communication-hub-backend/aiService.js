@@ -122,7 +122,7 @@ Generate constructive, highly specific feedback. Return ONLY valid JSON format m
 
   try {
     const response = await groq.chat.completions.create({
-      model: 'llama-3.3-70b-versatile',
+      model: 'llama-3.1-8b-instant',
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: `Chat Transcript:\n${transcript}` }
