@@ -29,7 +29,7 @@ export async function checkSafetyAndPII(messageText) {
 
     // Secondary Check: Llama Guard AI for Toxicity / Abuse
     const response = await groq.chat.completions.create({
-      model: 'llama-guard-3-8b',
+      model: 'llama-3.1-8b-instant',
       messages: [{ role: 'user', content: messageText }],
     });
 
