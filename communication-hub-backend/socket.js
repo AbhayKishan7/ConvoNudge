@@ -51,18 +51,24 @@ export function setupSocket(io) {
         });
 
         if (session.messages.length % 4 === 0) {
+          console.log('[AI Co-Pilot Input]:', session.messages);
           const aiSuggestion = await generateConversationPrompt(session.messages);
+          console.log('[AI Co-Pilot Output]:', aiSuggestion);
           if (aiSuggestion) {
+            console.log('[Socket Emit ai_copilot_hint]:', { sessionId, aiSuggestion });
             io.to(sessionId).emit('ai_copilot_hint', aiSuggestion);
           }
         }
       } catch (error) {
         console.error('Error handling send_message:', error);
+        console.log('[AI Co-Pilot Input]:', { sessionId, senderId, content });
+        console.log('[AI Co-Pilot Output]:', null);
       }
     });
 
     // 3. END CHAT MANUALLY
     socket.on('end_chat_session', ({ sessionId }) => {
+      console.log('[Socket Event end_chat_session]:', { sessionId, socketId: socket.id });
       socket.to(sessionId).emit('partner_disconnected');
       socket.leave(sessionId);
     });

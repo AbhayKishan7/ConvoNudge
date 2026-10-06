@@ -2,7 +2,9 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { socket } from '../lib/socket';
-import { MessageSquare, Send, Sparkles, User, AlertCircle, Award, CheckCircle2, LogOut } from 'lucide-react';
+import { MessageSquare, Send, Sparkles, AlertCircle, Award, CheckCircle2, LogOut } from 'lucide-react';
+
+const BACKEND_URL = process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || 'http://localhost:5000';
 
 export default function Home() {
   const [pseudonym, setPseudonym] = useState('');
@@ -35,6 +37,7 @@ export default function Home() {
       setMyUserId(data.myUserId);
       setMessages([]);
       setPartnerLeft(false);
+      setFeedback(null);
     });
 
     socket.on('receive_message', (msg) => {
@@ -42,9 +45,16 @@ export default function Home() {
     });
 
     socket.on('ai_copilot_hint', (hint) => {
-  console.log("AI Hint received from backend:", hint);
-  setAiHint(hint);
-});
+      console.log('AI Hint received from backend:', hint);
+      setAiHint(hint);
+    });
+
+    socket.on('ai_post_chat_feedback', (feedbackData) => {
+      console.log('AI Post-Chat Feedback received via socket:', feedbackData);
+      if (feedbackData) {
+        setFeedback(feedbackData.analytics || feedbackData);
+      }
+    });
 
     socket.on('message_blocked', (data) => {
       setBlockedNotice(data.reason);
@@ -59,6 +69,7 @@ export default function Home() {
       socket.off('match_found');
       socket.off('receive_message');
       socket.off('ai_copilot_hint');
+      socket.off('ai_post_chat_feedback');
       socket.off('message_blocked');
       socket.off('partner_disconnected');
     };
@@ -97,7 +108,7 @@ export default function Home() {
     socket.emit('end_chat_session', { sessionId: sessionData.sessionId });
 
     try {
-      const res = await fetch('http://localhost:5000/api/sessions/end-session', {
+      const res = await fetch(`${BACKEND_URL}/api/sessions/end-session`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -105,12 +116,15 @@ export default function Home() {
           userId: myUserId
         })
       });
-      const data = await res.json();
-      if (data.feedback) {
-        setFeedback(data.feedback.analytics);
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.feedback) {
+          setFeedback(data.feedback.analytics || data.feedback);
+        }
       }
     } catch (err) {
-      console.error('Error getting feedback:', err);
+      console.error('Error getting feedback via HTTP:', err);
     } finally {
       setSessionData(null);
       setPartnerLeft(false);
@@ -159,7 +173,7 @@ export default function Home() {
 
             <button
               onClick={handleJoinQueue}
-              disabled={isQueued || !pseudonym}
+              disabled={isQueued || !pseudonym.trim()}
               className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 disabled:text-slate-500 font-semibold rounded-lg transition text-white flex items-center justify-center gap-2"
             >
               {isQueued ? (
@@ -175,7 +189,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* 2. WHATSAPP STYLE CHAT ROOM */}
+      {/* 2. CHAT ROOM */}
       {sessionData && !feedback && (
         <div className="max-w-xl w-full bg-[#0b141a] border border-slate-800 rounded-2xl shadow-2xl flex flex-col h-[650px] overflow-hidden">
           
@@ -183,10 +197,10 @@ export default function Home() {
           <div className="p-3.5 bg-[#202c33] flex items-center justify-between border-b border-slate-800">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-emerald-600/30 text-emerald-400 rounded-full flex items-center justify-center font-bold">
-                {sessionData.partnerPseudonym.charAt(0).toUpperCase()}
+                {sessionData.partnerPseudonym ? sessionData.partnerPseudonym.charAt(0).toUpperCase() : 'P'}
               </div>
               <div>
-                <h2 className="font-semibold text-sm text-slate-100">{sessionData.partnerPseudonym}</h2>
+                <h2 className="font-semibold text-sm text-slate-100">{sessionData.partnerPseudonym || 'Peer'}</h2>
                 <p className="text-[11px] text-emerald-400 font-medium">
                   {partnerLeft ? 'Left the chat' : 'online'}
                 </p>
@@ -232,7 +246,7 @@ export default function Home() {
                         : 'bg-[#202c33] text-slate-200 rounded-tl-none'
                     }`}
                   >
-                    <p className="leading-relaxed break-words">{m.content}</p>
+                    <p className="leading-relaxed break-words">{m.content || m.text}</p>
                     <span className={`text-[10px] block text-right mt-1 ${isMe ? 'text-emerald-200/60' : 'text-slate-400'}`}>
                       {formattedTime}
                     </span>
@@ -260,12 +274,12 @@ export default function Home() {
               <Sparkles className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
               <div className="text-xs">
                 <span className="font-semibold text-emerald-400 block">AI Co-Pilot Suggestion:</span>
-                <p className="text-slate-300 italic">"{aiHint.suggestedQuestion}"</p>
+                <p className="text-slate-300 italic">"{aiHint.suggestedQuestion || aiHint.hint || aiHint}"</p>
               </div>
             </div>
           )}
 
-          {/* WhatsApp Style Input Bar */}
+          {/* Input Bar */}
           <div className="p-3 bg-[#202c33] flex items-center gap-2">
             <input
               type="text"
@@ -303,32 +317,40 @@ export default function Home() {
           <div className="grid grid-cols-2 gap-4">
             <div className="p-4 bg-slate-800/50 rounded-xl border border-slate-800">
               <span className="text-xs text-slate-400 block">Question Quality</span>
-              <span className="text-2xl font-bold text-emerald-400">{feedback.questionQualityScore}/10</span>
+              <span className="text-2xl font-bold text-emerald-400">{feedback.questionQualityScore ?? 5}/10</span>
             </div>
             <div className="p-4 bg-slate-800/50 rounded-xl border border-slate-800">
               <span className="text-xs text-slate-400 block">Conversation Balance</span>
-              <span className="text-2xl font-bold text-teal-400">{feedback.conversationBalanceScore}/10</span>
+              <span className="text-2xl font-bold text-teal-400">{feedback.conversationBalanceScore ?? 5}/10</span>
             </div>
           </div>
 
           <div className="space-y-2">
             <h3 className="text-xs font-semibold uppercase text-slate-400">Key Strengths</h3>
-            {feedback.strengths?.map((str: string, i: number) => (
-              <div key={i} className="flex items-center gap-2 text-xs text-slate-300">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>{str}</span>
-              </div>
-            ))}
+            {(feedback.strengths && feedback.strengths.length > 0) ? (
+              feedback.strengths.map((str: string, i: number) => (
+                <div key={i} className="flex items-center gap-2 text-xs text-slate-300">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>{str}</span>
+                </div>
+              ))
+            ) : (
+              <p className="text-xs text-slate-500 italic">No specific strengths recorded.</p>
+            )}
           </div>
 
           <div className="space-y-2">
             <h3 className="text-xs font-semibold uppercase text-slate-400">Areas to Improve</h3>
-            {feedback.areasForImprovement?.map((area: string, i: number) => (
-              <div key={i} className="flex items-center gap-2 text-xs text-slate-300">
-                <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
-                <span>{area}</span>
-              </div>
-            ))}
+            {(feedback.areasForImprovement && feedback.areasForImprovement.length > 0) ? (
+              feedback.areasForImprovement.map((area: string, i: number) => (
+                <div key={i} className="flex items-center gap-2 text-xs text-slate-300">
+                  <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span>{area}</span>
+                </div>
+              ))
+            ) : (
+              <p className="text-xs text-slate-500 italic">No specific improvement areas recorded.</p>
+            )}
           </div>
 
           <button

@@ -5,6 +5,9 @@ import { generatePostSessionFeedback } from '../aiService.js';
 const router = express.Router();
 
 router.post('/end-session', async (req, res) => {
+  let messages = [];
+  let feedback = null;
+
   try {
     const { sessionId, userId } = req.body;
 
@@ -19,7 +22,10 @@ router.post('/end-session', async (req, res) => {
     await session.save();
 
     // Generate AI analytics
-    const feedback = await generatePostSessionFeedback(session.messages, userId);
+    messages = session.messages || [];
+    console.log('[AI Feedback Input]:', messages);
+    feedback = await generatePostSessionFeedback(messages, userId);
+    console.log('[AI Feedback Output]:', feedback);
 
     return res.json({
       success: true,
@@ -34,6 +40,8 @@ router.post('/end-session', async (req, res) => {
     });
   } catch (error) {
     console.error('Error ending session:', error);
+    console.log('[AI Feedback Input]:', messages);
+    console.log('[AI Feedback Output]:', feedback);
     res.status(500).json({ error: 'Failed to generate feedback' });
   }
 });
