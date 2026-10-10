@@ -36,6 +36,7 @@ export default function Home() {
       setSessionData(data);
       setMyUserId(data.myUserId);
       setMessages([]);
+      setAiHint(null);
       setPartnerLeft(false);
       setFeedback(null);
     });
@@ -77,6 +78,7 @@ export default function Home() {
 
   const handleJoinQueue = () => {
     if (!pseudonym.trim()) return;
+    setAiHint(null);
     socket.connect();
     const userId = 'usr_' + Math.random().toString(36).substring(2, 9);
     
@@ -99,6 +101,7 @@ export default function Home() {
     });
 
     setInputMessage('');
+    setAiHint(null);
   };
 
   const handleEndSession = async () => {
@@ -357,6 +360,7 @@ export default function Home() {
             onClick={() => {
               setFeedback(null);
               setSessionData(null);
+              setAiHint(null);
             }}
             className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-semibold rounded-xl transition"
           >
