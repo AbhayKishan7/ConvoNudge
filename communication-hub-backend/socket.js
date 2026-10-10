@@ -2,6 +2,7 @@ import ChatSession from './models/ChatSession.js';
 import { checkSafetyAndPII, generateConversationPrompt } from './aiService.js';
 
 let waitingQueue = [];
+const sessionMessages = Object.create(null);
 
 export function setupSocket(io) {
   io.on('connection', (socket) => {
@@ -43,6 +44,11 @@ export function setupSocket(io) {
         session.messages.push(newMessage);
         await session.save();
 
+        const roomMessages = sessionMessages[sessionId]
+          ? sessionMessages[sessionId].concat(newMessage)
+          : [...session.messages];
+        sessionMessages[sessionId] = roomMessages;
+
         io.to(sessionId).emit('receive_message', {
           _id: session.messages[session.messages.length - 1]._id,
           senderId,
@@ -50,12 +56,12 @@ export function setupSocket(io) {
           timestamp: newMessage.timestamp
         });
 
-        if (session.messages.length % 4 === 0) {
-          console.log('[AI Co-Pilot Input]:', session.messages);
-          const aiSuggestion = await generateConversationPrompt(session.messages);
+        if (roomMessages.length >= 4 && roomMessages.length % 4 === 0) {
+          console.log('[AI Co-Pilot Input]:', roomMessages);
+          const aiSuggestion = await generateConversationPrompt(roomMessages);
           console.log('[AI Co-Pilot Output]:', aiSuggestion);
           if (aiSuggestion) {
-            console.log('[Socket Emit ai_copilot_hint]:', { sessionId, aiSuggestion });
+            console.log('[AI Copilot Trigger]: Sent hint for message count', roomMessages.length);
             io.to(sessionId).emit('ai_copilot_hint', aiSuggestion);
           }
         }
