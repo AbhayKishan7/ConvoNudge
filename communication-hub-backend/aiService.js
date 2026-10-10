@@ -7,7 +7,7 @@ dotenv.config();
 const apiKey = process.env.GROQ_API_KEY || 'dummy_key_until_env_loaded';
 
 const groq = new OpenAI({
-  apiKey: apiKey,
+  apiKey: process.env.GROQ_API_KEY,
   baseURL: 'https://api.groq.com/openai/v1',
 });
 
@@ -29,7 +29,7 @@ export async function checkSafetyAndPII(messageText) {
 
     // Secondary Check: Llama Model for Toxicity / Abuse
     const response = await groq.chat.completions.create({
-      model: 'llama-3.3-70b-versatile',
+      model: 'qwen/qwen3.8-27b',
       messages: [
         {
           role: 'system',
@@ -84,7 +84,7 @@ Respond ONLY in valid JSON format matching this structure:
 
   try {
     const response = await groq.chat.completions.create({
-      model: 'llama-3.3-70b-versatile',
+      model: 'qwen/qwen3.8-27b',
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: `Chat snippet:\n${transcript}` }
@@ -146,7 +146,7 @@ Return ONLY valid JSON matching this schema:
 
   try {
     const response = await groq.chat.completions.create({
-      model: 'llama-3.3-70b-versatile',
+      model: 'qwen/qwen3.8-27b',
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: `Chat Transcript:\n${transcript}` }
